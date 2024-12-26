@@ -22,42 +22,6 @@ export function createValidatedStore(name, options) {
     }),
 
     actions: {
-      async initializeSettings() {
-        try {
-          const localSettings = JSON.parse(localStorage.getItem(`${name}-settings`) || '{}')
-
-          // Fetch server settings if needed
-          const serverSettings = await fetch(`/api/${name}/settings`)
-            .then((r) => r.json())
-            .catch(() => ({}))
-
-          const mergedSettings = {
-            ...defaults,
-            ...serverSettings,
-            ...localSettings,
-          }
-
-          const validate = ajv.compile(schema)
-          const isValid = validate(mergedSettings)
-
-          if (!isValid) {
-            console.error(`${name} settings validation failed:`, validate.errors)
-            this.validationErrors = validate.errors
-            Object.assign(this.$state, defaults)
-          } else {
-            Object.assign(this.$state, mergedSettings)
-            this.validationErrors = null
-            // Save valid settings to localStorage
-            localStorage.setItem(`${name}-settings`, JSON.stringify(mergedSettings))
-          }
-        } catch (error) {
-          console.error(`Error initializing ${name} settings:`, error)
-          Object.assign(this.$state, defaults)
-        } finally {
-          this.isLoaded = true
-        }
-      },
-
       updateSettings(path, value) {
         const parts = path.split('.')
         let current = this

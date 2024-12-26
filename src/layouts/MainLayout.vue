@@ -64,15 +64,13 @@
 </template>
 
 <script setup>
-import { useStores } from 'stores'
+import { useUIStore } from 'stores'
 import { watch } from 'vue'
 import EssentialLink from 'components/EssentialLink.vue'
 
 // Initialize UI store
-const { ui, app, user, asset } = useStores()
+const ui = useUIStore()
 
-console.log(app, user, asset)
-// Wait for settings to load
 watch(
   () => ui.isLoaded,
   (isLoaded) => {
