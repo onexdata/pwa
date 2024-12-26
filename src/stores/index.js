@@ -130,19 +130,20 @@ export async function initializeApplication(appId = null, language = 'en-US') {
     const appData = data.data[0]
     const { settings = {}, translations = [], date_updated, version } = appData
 
-    // Store app metadata
-    localStorage.setItem(
-      'app-metadata',
-      JSON.stringify({
-        date_updated,
+    // Update app store with metadata first
+    stores.app.initializeWithSettings({
+      meta: {
         version,
-        lastSync: new Date().toISOString(),
-      }),
-    )
+        lastUpdate: date_updated,
+        lastSync: new Date().toISOString()
+      }
+    })
 
-    // Update each store with any server settings
+    // Update remaining stores with their settings
     Object.entries(stores).forEach(([storeId, store]) => {
-      store.initializeWithSettings(settings[storeId] || {})
+      if (storeId !== 'app') {  // Skip app store as it's already initialized
+        store.initializeWithSettings(settings[storeId] || {})
+      }
     })
 
     // Get messages from the first translation that matches our language

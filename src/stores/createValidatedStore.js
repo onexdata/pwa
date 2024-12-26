@@ -47,10 +47,27 @@ export function createValidatedStore(name, options) {
 
         if (isValid) {
           try {
-            // Update each property individually to maintain reactivity
+            // Deep merge nested objects to maintain reactivity
+            const deepMerge = (target, source) => {
+              for (const key in source) {
+                if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
+                  if (!(key in target)) target[key] = {}
+                  deepMerge(target[key], source[key])
+                } else {
+                  target[key] = source[key]
+                }
+              }
+            }
+
+            // Update state maintaining reactivity
             Object.keys(currentState).forEach(key => {
               if (key !== 'isLoaded' && key !== 'validationErrors') {
-                this.$state[key] = currentState[key]
+                if (typeof currentState[key] === 'object' && currentState[key] !== null && !Array.isArray(currentState[key])) {
+                  if (!this.$state[key]) this.$state[key] = {}
+                  deepMerge(this.$state[key], currentState[key])
+                } else {
+                  this.$state[key] = currentState[key]
+                }
               }
             })
             
