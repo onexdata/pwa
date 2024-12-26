@@ -6,7 +6,7 @@ import { schema as appSchema, defaults as appDefaults } from './app'
 import { schema as userSchema, defaults as userDefaults } from './user'
 import { schema as assetSchema, defaults as assetDefaults } from './asset'
 import { api } from 'boot/axios'
-import defaultMessages from 'src/i18n'
+import messages from 'src/i18n'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 
@@ -63,12 +63,11 @@ pinia.use(({ store }) => {
 
     store.initializeWithSettings = (serverSettings = {}) => {
       try {
-        const localSettings = JSON.parse(localStorage.getItem(`${store.$id}-settings`) || '{}')
         const baseState = { ...store.$state }
         delete baseState.isLoaded
         delete baseState.validationErrors
 
-        const mergedSettings = deepMerge({}, baseState, localSettings, serverSettings)
+        const mergedSettings = deepMerge({}, baseState, serverSettings)
 
         if (!store.validator(mergedSettings)) {
           return
@@ -85,9 +84,6 @@ pinia.use(({ store }) => {
           }
         })
         store.validationErrors = null
-        localStorage.setItem(`${store.$id}-settings`, JSON.stringify(mergedSettings))
-      } catch {
-        /* continue with defaults */
       } finally {
         store.isLoaded = true
       }
@@ -95,11 +91,18 @@ pinia.use(({ store }) => {
   }
 })
 
-export async function initializeApplication(appId = null, language = 'en-US') {
+// stores/index.js
+export async function initializeApplication(appId = null, language = 'en-US', savedSettings = {}) {
   const stores = useStores()
-  Object.values(stores).forEach((store) => store.initializeWithSettings())
 
-  if (!appId) return defaultMessages
+  // Initialize stores with saved settings first
+  Object.entries(stores).forEach(([storeId, store]) => {
+    const baseState = { ...storeConfigs[storeId].defaults }
+    const mergedSettings = deepMerge({}, baseState, savedSettings[storeId] || {})
+    store.initializeWithSettings(mergedSettings)
+  })
+
+  if (!appId) return messages
 
   try {
     const { data } = await api.get(`/items/apps`, {
@@ -109,11 +112,12 @@ export async function initializeApplication(appId = null, language = 'en-US') {
       },
     })
 
-    if (!data?.data?.[0]) return defaultMessages
+    if (!data?.data?.[0]) return messages
 
     const { settings = {}, translations = [], date_updated, version } = data.data[0]
 
-    const appSettings = {
+    // Add metadata to app settings
+    settings.app = {
       ...settings.app,
       meta: {
         version,
@@ -122,21 +126,35 @@ export async function initializeApplication(appId = null, language = 'en-US') {
       },
     }
 
-    Object.entries(stores).forEach(([storeId, store]) => {
-      const storeSettings = storeId === 'app' ? appSettings : settings[storeId] || {}
-      store.initializeWithSettings(storeSettings)
+    // Create complete settings object by merging defaults with server settings
+    const completeSettings = {}
+    Object.entries(storeConfigs).forEach(([storeId, config]) => {
+      completeSettings[storeId] = deepMerge({}, config.defaults, settings[storeId] || {})
     })
 
+    // Update all stores with complete settings
+    Object.entries(stores).forEach(([storeId, store]) => {
+      store.initializeWithSettings(completeSettings[storeId])
+    })
+
+    // Cache complete settings object
+    localStorage.setItem('settings', JSON.stringify(completeSettings))
+
+    // Create complete messages object
     const translation = translations[0]
-    return {
+    const completeMessages = {
       [language]: {
-        ...defaultMessages[language],
+        ...messages[language],
         ...translation?.messages,
       },
     }
+
+    // Cache complete messages
+    localStorage.setItem('i18n-messages', JSON.stringify(completeMessages))
+
+    return completeMessages
   } catch {
-    return defaultMessages
+    return messages
   }
 }
-
 export default pinia
