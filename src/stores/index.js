@@ -60,37 +60,31 @@ pinia.use(({ store }) => {
       try {
         // Start with defaults
         const localSettings = JSON.parse(localStorage.getItem(`${store.$id}-settings`) || '{}')
-        // Create clean copy of state without internal properties
-        const currentState = { ...store.$state }
-        delete currentState.isLoaded
-        delete currentState.validationErrors
+        // Start with defaults from the store's current state
+        const baseState = { ...store.$state }
+        delete baseState.isLoaded
+        delete baseState.validationErrors
 
-        // Merge in order: defaults (currentState) -> server -> local
+        // Apply server settings first, then local settings
         const mergedSettings = {
-          ...currentState,
-          ...serverSettings,
-          ...localSettings
+          ...baseState,
+          ...serverSettings
         }
 
-        // Remove internal state properties
-        delete mergedSettings.isLoaded
-        delete mergedSettings.validationErrors
-
-        // Validate merged settings
+        // Validate the merged settings
         const isValid = store.validator(mergedSettings)
 
         if (!isValid) {
-          console.warn(
-            `${store.$id} settings validation failed, using defaults:`,
-            store.validator.errors,
-          )
-          // Don't update store, keep defaults
-        } else {
-          Object.assign(store.$state, mergedSettings)
-          store.validationErrors = null
-          // Save valid settings to localStorage
-          localStorage.setItem(`${store.$id}-settings`, JSON.stringify(mergedSettings))
+          console.error(`${store.$id} settings validation failed:`, store.validator.errors)
+          return
         }
+
+        // Update the store state
+        Object.assign(store.$state, mergedSettings)
+        store.validationErrors = null
+
+        // Save to localStorage
+        localStorage.setItem(`${store.$id}-settings`, JSON.stringify(mergedSettings))
       } catch (error) {
         console.warn(`Error processing ${store.$id} settings, using defaults:`, error)
         // Keep using defaults
