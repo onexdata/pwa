@@ -17,6 +17,32 @@ addFormats(ajv, {
   formats: ['date-time', 'email'],
 })
 
+// Deep merge function that properly handles nested objects
+function deepMerge(target, ...sources) {
+  if (!sources.length) return target
+  const source = sources.shift()
+
+  if (source === undefined) return target
+
+  if (isObject(target) && isObject(source)) {
+    for (const key in source) {
+      if (isObject(source[key])) {
+        if (!target[key]) Object.assign(target, { [key]: {} })
+        deepMerge(target[key], source[key])
+      } else {
+        Object.assign(target, { [key]: source[key] })
+      }
+    }
+  }
+
+  return deepMerge(target, ...sources)
+}
+
+// Helper to check if value is a plain object
+function isObject(item) {
+  return item && typeof item === 'object' && !Array.isArray(item)
+}
+
 // Store configuration map
 const storeConfigs = {
   ui: { schema: uiSchema, defaults: uiDefaults },
@@ -60,19 +86,24 @@ pinia.use(({ store }) => {
       try {
         // Get local settings
         const localSettings = JSON.parse(localStorage.getItem(`${store.$id}-settings`) || '{}')
-        // Start with defaults from the store's current state
+
+        // Get base state without internal properties
         const baseState = { ...store.$state }
         delete baseState.isLoaded
         delete baseState.validationErrors
 
-        // Apply server settings first, then local settings
-        const mergedSettings = {
-          ...baseState,
-          ...serverSettings,
-          ...localSettings
-        }
+        // Perform deep merge in correct order:
+        // 1. Start with base state (defaults)
+        // 2. Apply local settings
+        // 3. Apply server settings (takes precedence)
+        const mergedSettings = deepMerge(
+          {}, // Start with empty object to avoid modifying baseState
+          baseState,
+          localSettings,
+          serverSettings,
+        )
 
-        // Validate the merged settings
+        // Now validate the complete merged object
         const isValid = store.validator(mergedSettings)
 
         if (!isValid) {
@@ -80,21 +111,25 @@ pinia.use(({ store }) => {
           return
         }
 
-        // Update each property individually to maintain reactivity
-        Object.keys(mergedSettings).forEach(key => {
+        // Update state maintaining reactivity
+        Object.keys(mergedSettings).forEach((key) => {
           if (key !== 'isLoaded' && key !== 'validationErrors') {
-            store.$state[key] = mergedSettings[key]
+            if (isObject(mergedSettings[key])) {
+              if (!store.$state[key]) store.$state[key] = {}
+              deepMerge(store.$state[key], mergedSettings[key])
+            } else {
+              store.$state[key] = mergedSettings[key]
+            }
           }
         })
         store.validationErrors = null
 
-        // Save to localStorage
+        // Save complete merged settings to localStorage
         const saveData = JSON.stringify(mergedSettings)
         localStorage.setItem(`${store.$id}-settings`, saveData)
         console.log(`Initialized ${store.$id} with settings:`, saveData)
       } catch (error) {
         console.warn(`Error processing ${store.$id} settings, using defaults:`, error)
-        // Keep using defaults
       } finally {
         store.isLoaded = true
       }
@@ -115,7 +150,7 @@ export async function initializeApplication(appId = null, language = 'en-US') {
 
   try {
     // Fetch server settings with language filter
-    const { data } = await api.get(`http://localhost:8055/items/apps`, {
+    const { data } = await api.get(`/items/apps`, {
       params: {
         fields: 'date_updated,version,settings,translations.messages',
         'deep[translations][_filter][languages_code][_eq]': language,
@@ -136,8 +171,8 @@ export async function initializeApplication(appId = null, language = 'en-US') {
       meta: {
         version,
         lastUpdate: date_updated,
-        lastSync: new Date().toISOString()
-      }
+        lastSync: new Date().toISOString(),
+      },
     }
 
     // Initialize all stores with their settings
