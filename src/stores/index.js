@@ -60,27 +60,17 @@ pinia.use(({ store }) => {
       try {
         // Start with defaults
         const localSettings = JSON.parse(localStorage.getItem(`${store.$id}-settings`) || '{}')
-        // Deep merge function
-        const deepMerge = (target, source) => {
-          for (const key in source) {
-            if (source[key] instanceof Object && !Array.isArray(source[key])) {
-              if (!target[key]) Object.assign(target, { [key]: {} })
-              deepMerge(target[key], source[key])
-            } else {
-              Object.assign(target, { [key]: source[key] })
-            }
-          }
-          return target
-        }
+        // Create clean copy of state without internal properties
+        const currentState = { ...store.$state }
+        delete currentState.isLoaded
+        delete currentState.validationErrors
 
-        // Merge settings in correct order: defaults -> server -> local
-        const mergedSettings = deepMerge(
-          deepMerge(
-            { ...store.$state }, // Start with defaults
-            serverSettings || {} // Apply server settings
-          ),
-          localSettings || {} // Apply local settings last
-        )
+        // Merge in order: defaults (currentState) -> server -> local
+        const mergedSettings = {
+          ...currentState,
+          ...serverSettings,
+          ...localSettings
+        }
 
         // Remove internal state properties
         delete mergedSettings.isLoaded

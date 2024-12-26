@@ -23,23 +23,26 @@ export function createValidatedStore(name, options) {
 
     actions: {
       updateSettings(path, value) {
+        // Get current settings from localStorage
+        const currentSettings = JSON.parse(localStorage.getItem(`${name}-settings`) || '{}')
+        
+        // Update the value at the specified path
         const parts = path.split('.')
-        let current = this
+        let target = currentSettings
         for (let i = 0; i < parts.length - 1; i++) {
-          current = current[parts[i]]
+          if (!target[parts[i]]) target[parts[i]] = {}
+          target = target[parts[i]]
         }
-        current[parts[parts.length - 1]] = value
+        target[parts[parts.length - 1]] = value
 
-        // Create a clean state object without internal properties
-        const stateToStore = { ...this.$state }
-        delete stateToStore.isLoaded
-        delete stateToStore.validationErrors
-
+        // Validate the entire new state
         const validate = ajv.compile(schema)
-        const isValid = validate(stateToStore)
+        const isValid = validate(currentSettings)
 
         if (isValid) {
-          localStorage.setItem(`${name}-settings`, JSON.stringify(stateToStore))
+          // Update both localStorage and state
+          localStorage.setItem(`${name}-settings`, JSON.stringify(currentSettings))
+          Object.assign(this.$state, currentSettings)
         } else {
           console.error(`Invalid ${name} settings update:`, validate.errors)
         }
