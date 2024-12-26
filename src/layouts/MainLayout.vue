@@ -12,7 +12,7 @@
           @click="toggleLeftDrawer"
         />
 
-        <q-toolbar-title v-if="ui.toolbar.showTitle"> Quasar App </q-toolbar-title>
+        <q-toolbar-title v-if="ui.toolbar.showTitle"> {{ $t('app.name') }} </q-toolbar-title>
 
         <div>Quasar v{{ $q.version }}</div>
       </q-toolbar>
