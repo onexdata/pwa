@@ -80,12 +80,18 @@ pinia.use(({ store }) => {
           return
         }
 
-        // Update the store state
-        Object.assign(store.$state, mergedSettings)
+        // Update each property individually to maintain reactivity
+        Object.keys(mergedSettings).forEach(key => {
+          if (key !== 'isLoaded' && key !== 'validationErrors') {
+            store.$state[key] = mergedSettings[key]
+          }
+        })
         store.validationErrors = null
 
         // Save to localStorage
-        localStorage.setItem(`${store.$id}-settings`, JSON.stringify(mergedSettings))
+        const saveData = JSON.stringify(mergedSettings)
+        localStorage.setItem(`${store.$id}-settings`, saveData)
+        console.log(`Initialized ${store.$id} with settings:`, saveData)
       } catch (error) {
         console.warn(`Error processing ${store.$id} settings, using defaults:`, error)
         // Keep using defaults
