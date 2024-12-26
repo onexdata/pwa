@@ -58,7 +58,7 @@ pinia.use(({ store }) => {
     // Add a new initializeWithSettings method to each store
     store.initializeWithSettings = (serverSettings = {}) => {
       try {
-        // Start with defaults
+        // Get local settings
         const localSettings = JSON.parse(localStorage.getItem(`${store.$id}-settings`) || '{}')
         // Start with defaults from the store's current state
         const baseState = { ...store.$state }
@@ -68,7 +68,8 @@ pinia.use(({ store }) => {
         // Apply server settings first, then local settings
         const mergedSettings = {
           ...baseState,
-          ...serverSettings
+          ...serverSettings,
+          ...localSettings
         }
 
         // Validate the merged settings
