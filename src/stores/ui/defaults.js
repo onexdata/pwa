@@ -85,6 +85,30 @@ export const defaults = {
     showSearch: true,
     flat: false,
     glossy: true,
+    buttons: [
+      {
+        id: 'theme',
+        icon: 'dark_mode',
+        tooltip: 'Toggle Dark Mode',
+        action: {
+          type: 'TOGGLE_THEME',
+          payload: {},
+        },
+      },
+      {
+        id: 'notifications',
+        icon: 'notifications',
+        tooltip: 'View Notifications',
+        badge: true,
+        badgeContent: '5',
+        action: {
+          type: 'OPEN_PANEL',
+          payload: {
+            target: 'notifications',
+          },
+        },
+      },
+    ],
   },
 
   // Animation settings
