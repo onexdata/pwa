@@ -5,49 +5,45 @@ import { i18n } from './i18n'
 
 export default defineBoot(async () => {
   try {
-    // First load saved overrides from localStorage
-    const savedOverrides = JSON.parse(localStorage.getItem('i18n-overrides') || '{}')
+    // Get user's preferred language or default to en-US
+    const userLanguage = localStorage.getItem('user-language') || 'en-US'
 
-    // Apply saved overrides first
-    if (Object.keys(savedOverrides).length > 0) {
-      Object.entries(savedOverrides).forEach(([locale, translations]) => {
-        const existingMessages = i18n.global.messages.value[locale] || {}
-        const mergedMessages = {
-          ...existingMessages,
-          ...translations,
-          app: {
-            ...existingMessages.app,
-            ...translations.app,
-          },
-        }
-        i18n.global.setLocaleMessage(locale, mergedMessages)
+    // First load saved messages from localStorage
+    const savedMessages = JSON.parse(localStorage.getItem('i18n-messages') || '{}')
+
+    // Apply saved messages first if they exist
+    if (Object.keys(savedMessages).length > 0) {
+      Object.entries(savedMessages).forEach(([locale, translations]) => {
+        i18n.global.setLocaleMessage(locale, translations)
       })
     }
 
-    // Try to get fresh settings and i18n from server
-    const messages = await initializeApplication(process.env.VITE_APP_ID || 'default')
+    try {
+      // Try to get fresh settings and messages from server
+      const messages = await initializeApplication(
+        process.env.VITE_APP_ID || 'default',
+        userLanguage,
+      )
 
-    // If we got new messages from server, merge and store them
-    if (messages && Object.keys(messages).length > 0) {
-      // Apply new messages
-      Object.entries(messages).forEach(([locale, translations]) => {
-        const existingMessages = i18n.global.messages.value[locale] || {}
-        const mergedMessages = {
-          ...existingMessages,
-          ...translations,
-          app: {
-            ...existingMessages.app,
-            ...translations.app,
-          },
-        }
-        i18n.global.setLocaleMessage(locale, mergedMessages)
-      })
+      // If we got new messages from server, update them
+      if (messages && Object.keys(messages).length > 0) {
+        // Apply new messages
+        Object.entries(messages).forEach(([locale, translations]) => {
+          i18n.global.setLocaleMessage(locale, translations)
+        })
 
-      // Store the new overrides in localStorage
-      localStorage.setItem('i18n-overrides', JSON.stringify(messages))
+        // Store the new messages in localStorage for offline use
+        localStorage.setItem('i18n-messages', JSON.stringify(messages))
+      }
+    } catch {
+      // Don't log anything here since stores/index.js will handle the warning
+      // App continues with saved messages or defaults
     }
+
+    // Set the current language
+    i18n.global.locale.value = userLanguage
   } catch (error) {
-    console.warn('Could not reach server for settings updates:', error.message)
-    // App continues with saved overrides or defaults
+    console.error('Critical initialization error:', error.message)
+    // App continues with defaults
   }
 })

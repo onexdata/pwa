@@ -96,7 +96,7 @@ pinia.use(({ store }) => {
 })
 
 // Add global initialization function
-export async function initializeApplication(appId = null) {
+export async function initializeApplication(appId = null, language = 'en-US') {
   // Initialize stores with defaults first
   const stores = useStores()
   Object.values(stores).forEach((store) => store.initializeWithSettings())
@@ -106,25 +106,56 @@ export async function initializeApplication(appId = null) {
     return defaultMessages
   }
 
-  // Fetch server settings
-  const { data } = await api.get(`/api/apps/${appId}`)
-  const { settings = {}, i18n = {} } = data
+  try {
+    // Fetch server settings with language filter
+    const { data } = await api.get(`http://localhost:8055/items/apps`, {
+      params: {
+        fields: 'date_updated,version,settings,translations.messages',
+        'deep[translations][_filter][languages_code][_eq]': language,
+      },
+    })
 
-  // Update each store with any server settings
-  Object.entries(stores).forEach(([storeId, store]) => {
-    store.initializeWithSettings(settings[storeId] || {})
-  })
-
-  // Merge i18n messages
-  const mergedMessages = {}
-  Object.entries(defaultMessages).forEach(([locale, messages]) => {
-    mergedMessages[locale] = {
-      ...messages,
-      ...(i18n[locale] || {}),
+    if (!data?.data?.[0]) {
+      console.warn('No app configuration found')
+      return defaultMessages
     }
-  })
 
-  return mergedMessages
+    const appData = data.data[0]
+    const { settings = {}, translations = [], date_updated, version } = appData
+
+    // Store app metadata
+    localStorage.setItem(
+      'app-metadata',
+      JSON.stringify({
+        date_updated,
+        version,
+        lastSync: new Date().toISOString(),
+      }),
+    )
+
+    // Update each store with any server settings
+    Object.entries(stores).forEach(([storeId, store]) => {
+      store.initializeWithSettings(settings[storeId] || {})
+    })
+
+    // Get messages from the first translation that matches our language
+    const translation = translations[0]
+    const i18nMessages = translation?.messages || {}
+
+    // Merge i18n messages for the requested language
+    const mergedMessages = {
+      [language]: {
+        ...defaultMessages[language],
+        ...i18nMessages,
+      },
+    }
+
+    return mergedMessages
+  } catch {
+    // Don't log the full error object, just note that hydration failed
+    console.warn('Warning: The hydration call failed. Reverting to localStorage / defaults')
+    return defaultMessages
+  }
 }
 
 export default pinia
