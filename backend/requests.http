@@ -1,0 +1,13 @@
+### GET http://localhost:8055/items/apps?translations=*&deep[translations]=*
+GET http://localhost:8055/items/apps
+
+###
+GET http://localhost:8055/items/apps/?fields=*,[_filter][name][_eq]=admin
+
+###
+GET http://localhost:8055/items/languages
+
+
+###
+GET http://localhost:8055/items/apps?fields=date_updated,version,settings,translations.messages&deep[translations][_filter][languages_code][_eq]=en-US
+
