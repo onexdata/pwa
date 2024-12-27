@@ -1,6 +1,6 @@
 <template>
   <q-layout :view="ui.layout.view">
-    <q-header :elevated="ui.header.elevated" v-if="ui.header.show">
+    <q-header :class="ui.header.class" :elevated="ui.header.elevated" v-if="ui.header.show">
       <q-toolbar :dense="ui.toolbar.dense" :flat="ui.toolbar.flat" :glossy="ui.toolbar.glossy">
         <q-btn
           v-if="ui.toolbar.showNavButton"
@@ -14,10 +14,7 @@
 
         <q-toolbar-title v-if="ui.toolbar.showTitle"> {{ $t('app.name') }} </q-toolbar-title>
 
-        <div v-if="isFeatureEnabled('ui.layout.quickMenu')">
-          <b>here goes nothing... ola la</b>Quickmenu is enabled!
-        </div>
-        <div>Quasar v{{ $q.version }}</div>
+        <QuickMenu v-if="isFeatureEnabled('ui.layout.quickMenu')" />
       </q-toolbar>
     </q-header>
 
@@ -71,6 +68,7 @@ import { useUIStore } from 'stores'
 import { watch } from 'vue'
 import EssentialLink from 'components/EssentialLink.vue'
 import { isFeatureEnabled } from '../composables/useFeature'
+import QuickMenu from 'components/QuickMenu.vue'
 
 // Initialize UI store
 const ui = useUIStore()
