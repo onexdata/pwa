@@ -1,7 +1,7 @@
 // stores/app/schema.js
 export const schema = {
   type: 'object',
-  required: ['meta', 'state', 'config'],
+  required: ['meta', 'state', 'config', 'features'],
   properties: {
     meta: {
       type: 'object',
@@ -40,6 +40,40 @@ export const schema = {
           },
         },
       },
+    },
+    features: {
+      type: 'object',
+      patternProperties: {
+        '^.*$': {
+          oneOf: [
+            {
+              type: 'object',
+              properties: {
+                enabled: { type: 'boolean' },
+                description: { type: 'string' },
+                required: { type: 'boolean' },
+                components: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+                expectedCoverage: { type: 'number' },
+                dependencies: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+              },
+              required: ['enabled'],
+            },
+            {
+              type: 'object',
+              additionalProperties: {
+                anyOf: [{ type: 'boolean' }, { type: 'object' }],
+              },
+            },
+          ],
+        },
+      },
+      additionalProperties: false,
     },
   },
 }

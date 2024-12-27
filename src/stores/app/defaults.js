@@ -16,4 +16,5 @@ export const defaults = {
       timeout: 5000,
     },
   },
+  features: {}, // This will be populated from features.json
 }

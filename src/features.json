@@ -1,0 +1,148 @@
+{
+  "core": {
+    "pwa": {
+      "enabled": true,
+      "description": "Progressive Web App capabilities",
+      "required": true,
+      "components": ["ServiceWorker", "Manifest"],
+      "expectedCoverage": 90
+    },
+    "offline": {
+      "enabled": true,
+      "description": "Offline-first functionality",
+      "dependencies": ["core.pwa"],
+      "expectedCoverage": 85
+    },
+    "multiTenant": {
+      "enabled": true,
+      "description": "Multi-tenant support",
+      "expectedCoverage": 80
+    }
+  },
+  "i18n": {
+    "multiLanguage": {
+      "enabled": true,
+      "description": "Multiple language support",
+      "components": ["LanguageSelector", "TranslationProvider"],
+      "expectedCoverage": 90
+    },
+    "rtl": {
+      "enabled": false,
+      "description": "Right-to-left language support",
+      "dependencies": ["i18n.multiLanguage"],
+      "expectedCoverage": 75
+    }
+  },
+  "ui": {
+    "theme": {
+      "darkMode": {
+        "enabled": true,
+        "description": "Dark mode support",
+        "expectedCoverage": 85
+      },
+      "customColors": {
+        "enabled": true,
+        "description": "Custom color scheme support",
+        "expectedCoverage": 80
+      }
+    },
+    "layout": {
+      "quickMenu": {
+        "enabled": true,
+        "description": "A quick menu (implemented however the layout likes) that provides the menu.quick items",
+        "required": true,
+        "expectedCoverage": 95
+      },
+      "responsive": {
+        "enabled": true,
+        "description": "Responsive layout system",
+        "required": true,
+        "expectedCoverage": 95
+      },
+      "navigation": {
+        "mainMenu": {
+          "enabled": true,
+          "description": "Main navigation menu",
+          "components": ["MainMenu", "MenuItems"],
+          "expectedCoverage": 90
+        },
+        "userMenu": {
+          "enabled": true,
+          "description": "User profile menu",
+          "components": ["UserMenu", "UserProfile"],
+          "expectedCoverage": 85
+        },
+        "breadcrumbs": {
+          "enabled": true,
+          "description": "Breadcrumb navigation",
+          "expectedCoverage": 80
+        }
+      }
+    },
+    "components": {
+      "search": {
+        "global": {
+          "enabled": true,
+          "description": "Global search functionality",
+          "components": ["SearchBar", "SearchResults"],
+          "expectedCoverage": 85
+        },
+        "advanced": {
+          "enabled": false,
+          "description": "Advanced search features",
+          "dependencies": ["ui.components.search.global"],
+          "expectedCoverage": 80
+        }
+      },
+      "notifications": {
+        "alerts": {
+          "enabled": true,
+          "description": "Notification center",
+          "components": ["NotificationCenter", "NotificationItem"],
+          "expectedCoverage": 85
+        },
+        "realtime": {
+          "enabled": true,
+          "description": "Real-time notifications",
+          "dependencies": ["ui.components.notifications.alerts"],
+          "expectedCoverage": 80
+        }
+      }
+    }
+  },
+  "auth": {
+    "preferences": {
+      "enabled": true,
+      "description": "User preferences system",
+      "components": ["PreferencesPanel"],
+      "expectedCoverage": 85
+    },
+    "roles": {
+      "enabled": true,
+      "description": "Role-based permissions",
+      "expectedCoverage": 90
+    }
+  },
+  "platform": {
+    "electron": {
+      "enabled": false,
+      "description": "Electron desktop support",
+      "expectedCoverage": 70
+    },
+    "cordova": {
+      "enabled": false,
+      "description": "Cordova mobile support",
+      "expectedCoverage": 70
+    },
+    "capacitor": {
+      "enabled": false,
+      "description": "Capacitor mobile support",
+      "expectedCoverage": 70
+    },
+    "bex": {
+      "enabled": false,
+      "description": "Browser extension support",
+      "expectedCoverage": 70
+    }
+  }
+}

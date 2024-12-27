@@ -14,6 +14,7 @@
 
         <q-toolbar-title v-if="ui.toolbar.showTitle"> {{ $t('app.name') }} </q-toolbar-title>
 
+        <div v-if="isFeatureEnabled('ui.layout.quickMenu')">Quickmenu is enabled!</div>
         <div>Quasar v{{ $q.version }}</div>
       </q-toolbar>
     </q-header>
@@ -67,6 +68,7 @@
 import { useUIStore } from 'stores'
 import { watch } from 'vue'
 import EssentialLink from 'components/EssentialLink.vue'
+import { isFeatureEnabled } from '../composables/useFeature'
 
 // Initialize UI store
 const ui = useUIStore()

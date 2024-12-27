@@ -7,6 +7,7 @@ import { schema as userSchema, defaults as userDefaults } from './user'
 import { schema as assetSchema, defaults as assetDefaults } from './asset'
 import { api } from 'boot/axios'
 import messages from 'src/i18n'
+import features from '../features.json'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 
@@ -67,9 +68,15 @@ pinia.use(({ store }) => {
         delete baseState.isLoaded
         delete baseState.validationErrors
 
+        // If this is the app store, ensure features are included
+        if (store.$id === 'app') {
+          baseState.features = features
+        }
+
         const mergedSettings = deepMerge({}, baseState, serverSettings)
 
         if (!store.validator(mergedSettings)) {
+          console.error(`Validation failed for ${store.$id}:`, store.validator.errors)
           return
         }
 
@@ -91,13 +98,18 @@ pinia.use(({ store }) => {
   }
 })
 
-// stores/index.js
 export async function initializeApplication(appId = null, language = 'en-US', savedSettings = {}) {
   const stores = useStores()
 
   // Initialize stores with saved settings first
   Object.entries(stores).forEach(([storeId, store]) => {
     const baseState = { ...storeConfigs[storeId].defaults }
+
+    // For app store, ensure features from features.json are included
+    if (storeId === 'app') {
+      baseState.features = features
+    }
+
     const mergedSettings = deepMerge({}, baseState, savedSettings[storeId] || {})
     store.initializeWithSettings(mergedSettings)
   })
@@ -129,7 +141,18 @@ export async function initializeApplication(appId = null, language = 'en-US', sa
     // Create complete settings object by merging defaults with server settings
     const completeSettings = {}
     Object.entries(storeConfigs).forEach(([storeId, config]) => {
-      completeSettings[storeId] = deepMerge({}, config.defaults, settings[storeId] || {})
+      if (storeId === 'app') {
+        // For app store, ensure features are preserved and merged correctly
+        const serverSettings = settings[storeId] || {}
+        const featuresWithDefaults = deepMerge({}, features, serverSettings.features || {})
+        const mergedAppSettings = deepMerge({}, config.defaults, serverSettings)
+        completeSettings[storeId] = {
+          ...mergedAppSettings,
+          features: featuresWithDefaults,
+        }
+      } else {
+        completeSettings[storeId] = deepMerge({}, config.defaults, settings[storeId] || {})
+      }
     })
 
     // Update all stores with complete settings
@@ -153,8 +176,10 @@ export async function initializeApplication(appId = null, language = 'en-US', sa
     localStorage.setItem('i18n-messages', JSON.stringify(completeMessages))
 
     return completeMessages
-  } catch {
+  } catch (error) {
+    console.error('Failed to initialize application:', error)
     return messages
   }
 }
+
 export default pinia
