@@ -30,7 +30,9 @@
           <q-item>
             <q-item-section>
               <q-item-label>Vue Version</q-item-label>
-              <q-item-label caption>{{ getCurrentInstance()?.appContext?.app?.version || 'Not available' }}</q-item-label>
+              <q-item-label caption>{{
+                getCurrentInstance()?.appContext?.app?.version || 'Not available'
+              }}</q-item-label>
             </q-item-section>
           </q-item>
           <q-item>
@@ -145,7 +147,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { getCurrentInstance } from 'vue'
+// import { getCurrentInstance } from 'vue'
 import { useStores } from 'stores'
 import features from '../features.json'
 
