@@ -1,6 +1,5 @@
 <template>
   <div class="quick-menu q-gutter-sm">
-    {{ menuItems }}
     <q-btn
       v-for="item in menuItems"
       :key="item.title"

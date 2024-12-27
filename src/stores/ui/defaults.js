@@ -79,6 +79,35 @@ export const defaults = {
 
   // Main menu configuration
   menus: {
+    quick: [
+      {
+        title: 'Search',
+        icon: 'search',
+        description: 'Search across the application',
+        action: () => {
+          // Will be implemented by the search feature
+          console.log('Search action triggered')
+        }
+      },
+      {
+        title: 'Settings',
+        icon: 'settings',
+        description: 'Configure application settings',
+        action: () => {
+          // Will open settings panel
+          console.log('Settings action triggered')
+        }
+      },
+      {
+        title: 'Help',
+        icon: 'help',
+        description: 'Get help and documentation',
+        action: () => {
+          // Will open help documentation
+          console.log('Help action triggered')
+        }
+      }
+    ],
     main: [
       {
         title: 'Docs',
