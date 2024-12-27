@@ -30,7 +30,7 @@
           <q-item>
             <q-item-section>
               <q-item-label>Vue Version</q-item-label>
-              <q-item-label caption>{{ $q.versions.vue }}</q-item-label>
+              <q-item-label caption>{{ Vue?.version || 'Not available' }}</q-item-label>
             </q-item-section>
           </q-item>
           <q-item>
@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, Vue } from 'vue'
 import { useStores } from 'stores'
 import features from '../features.json'
 
