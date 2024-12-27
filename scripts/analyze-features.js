@@ -13,6 +13,8 @@ const features = JSON.parse(readFileSync('./src/features.json', 'utf8'))
 class FeatureAnalyzer {
   constructor() {
     this.coverage = new Map()
+    this.scannedFiles = []
+    this.featureRefs = []
     this.initializeCoverage()
   }
 
@@ -49,9 +51,12 @@ class FeatureAnalyzer {
       ignore: ['node_modules/**'],
     })
 
+    console.log('\nScanning files:')
+
     // Analyze source files
     for (const file of files) {
       try {
+        console.log(chalk.gray(`Analyzing ${file}`))
         const content = readFileSync(file, 'utf8')
         await this.analyzeFile(content, file)
       } catch (error) {
@@ -62,6 +67,7 @@ class FeatureAnalyzer {
     // Analyze test files
     for (const file of testFiles) {
       try {
+        console.log(chalk.gray(`Analyzing test ${file}`))
         const content = readFileSync(file, 'utf8')
         await this.analyzeFile(content, file, true)
       } catch (error) {
@@ -71,11 +77,55 @@ class FeatureAnalyzer {
   }
 
   analyzeFile(content, filename, isTest = false) {
-    // Extract script content from Vue files
+    this.scannedFiles.push(filename)
+
+    // For Vue files, analyze both script and template sections
     if (filename.endsWith('.vue')) {
+      let scriptContent = ''
+      let templateContent = ''
+
+      // Extract script content
       const scriptMatch = content.match(/<script\b[^>]*>([\s\S]*?)<\/script>/)
-      if (!scriptMatch) return
-      content = scriptMatch[1]
+      if (scriptMatch) {
+        scriptContent = scriptMatch[1]
+        console.log(chalk.gray(`Found script content in ${filename}`))
+      }
+
+      // Extract template content
+      const templateMatch = content.match(/<template>([\s\S]*?)<\/template>/)
+      if (templateMatch) {
+        console.log(chalk.gray(`Found template content in ${filename}`))
+
+        // Log the template content for debugging
+        console.log(chalk.gray('Template content:'))
+        console.log(templateMatch[1])
+
+        // Convert template to analyzable code
+        templateContent = templateMatch[1]
+          .split('\n')
+          .map((line) => {
+            // Match and convert feature checks in v-if directives
+            const featureMatch = line.match(/v-if="isFeatureEnabled\('([^']+)'\)"/)
+            if (featureMatch) {
+              console.log(chalk.green(`Found feature check in template: ${featureMatch[1]}`))
+              return `/* Template */ isFeatureEnabled('${featureMatch[1]}');`
+            }
+            return ''
+          })
+          .filter(Boolean)
+          .join('\n')
+
+        console.log(chalk.gray('Converted template content:'))
+        console.log(templateContent)
+      }
+
+      // Combine for analysis with clear separation
+      content = [
+        '// Script content',
+        scriptContent,
+        '// Template-derived content',
+        templateContent,
+      ].join('\n')
     }
 
     try {
@@ -85,11 +135,15 @@ class FeatureAnalyzer {
       })
 
       traverse(ast, {
-        // Look for useFeature calls
+        // Look for useFeature and isFeatureEnabled calls
         CallExpression: (path) => {
-          if (path.node.callee.name === 'useFeature') {
+          if (
+            path.node.callee.name === 'useFeature' ||
+            path.node.callee.name === 'isFeatureEnabled'
+          ) {
             const featurePath = path.node.arguments[0]?.value
             if (featurePath) {
+              console.log(chalk.green(`Found feature reference: ${featurePath} in ${filename}`))
               this.recordFeatureUsage(featurePath, filename, isTest)
             }
           }
@@ -99,6 +153,9 @@ class FeatureAnalyzer {
           if (path.node.object.name === 'features') {
             const featurePath = this.extractFeaturePath(path.node)
             if (featurePath) {
+              console.log(
+                chalk.green(`Found direct feature reference: ${featurePath} in ${filename}`),
+              )
               this.recordFeatureUsage(featurePath, filename, isTest)
             }
           }
@@ -124,8 +181,14 @@ class FeatureAnalyzer {
   }
 
   recordFeatureUsage(featurePath, filename, isTest) {
+    this.featureRefs.push({ path: featurePath, file: filename })
     const coverage = this.coverage.get(featurePath)
-    if (!coverage) return
+    if (!coverage) {
+      console.log(
+        chalk.yellow(`Warning: Reference to unknown feature path: ${featurePath} in ${filename}`),
+      )
+      return
+    }
 
     coverage.implemented = true
     coverage.references.push(filename)
@@ -136,11 +199,43 @@ class FeatureAnalyzer {
       coverage.components.add(filename)
     }
 
-    // Calculate SLOC for the file
+    // For Vue files, only count lines in the relevant section containing the feature
     const content = readFileSync(filename, 'utf8')
-    coverage.sloc += content
-      .split('\n')
-      .filter((line) => line.trim() && !line.trim().startsWith('//')).length
+    if (filename.endsWith('.vue')) {
+      // Split the file into lines
+      const lines = content.split('\n')
+      const featureLines = []
+      let inRelevantBlock = false
+      let blockIndentation = 0
+
+      // Find the section with our feature and track its scope
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+        if (line.includes(`isFeatureEnabled('${featurePath}')`)) {
+          inRelevantBlock = true
+          // Get the indentation level of the feature check
+          blockIndentation = line.search(/\S/)
+          featureLines.push(line)
+        } else if (inRelevantBlock) {
+          // Check if we've exited the block (lower or equal indentation)
+          const currentIndentation = line.search(/\S/)
+          if (currentIndentation <= blockIndentation && line.trim() !== '') {
+            inRelevantBlock = false
+          } else {
+            featureLines.push(line)
+          }
+        }
+      }
+
+      coverage.sloc = featureLines.filter(
+        (line) => line.trim() && !line.trim().startsWith('//'),
+      ).length
+    } else {
+      // For non-Vue files, count all non-comment lines
+      coverage.sloc += content
+        .split('\n')
+        .filter((line) => line.trim() && !line.trim().startsWith('//')).length
+    }
   }
 
   generateReport() {
@@ -198,9 +293,25 @@ class FeatureAnalyzer {
     return 'IMPLEMENTED'
   }
 
+  formatStatus(status) {
+    switch (status) {
+      case 'IMPLEMENTED':
+        return chalk.green('Implemented')
+      case 'NOT_IMPLEMENTED':
+        return chalk.red('Not Implemented')
+      case 'NEEDS_TESTS':
+        return chalk.yellow('Needs Tests')
+      case 'DISABLED':
+        return chalk.gray('Disabled')
+      default:
+        return status
+    }
+  }
+
   printReport(report) {
     console.log(chalk.bold('\nFeature Coverage Report'))
     console.log(chalk.gray('Generated at:'), report.timestamp)
+
     console.log('\nSummary:')
     console.log(chalk.blue('Total Features:'), report.summary.totalFeatures)
     console.log(chalk.green('Implemented:'), report.summary.implementedFeatures)
@@ -215,22 +326,18 @@ class FeatureAnalyzer {
       console.log(`  SLOC: ${data.sloc}`)
       console.log(`  Components: ${data.componentCount}`)
       console.log(`  Tests: ${data.testCount}`)
+      if (data.references.length > 0) {
+        console.log('  Referenced in:')
+        data.references.forEach((ref) => console.log(`    - ${ref}`))
+      }
     })
-  }
 
-  formatStatus(status) {
-    switch (status) {
-      case 'IMPLEMENTED':
-        return chalk.green('Implemented')
-      case 'NOT_IMPLEMENTED':
-        return chalk.red('Not Implemented')
-      case 'NEEDS_TESTS':
-        return chalk.yellow('Needs Tests')
-      case 'DISABLED':
-        return chalk.gray('Disabled')
-      default:
-        return status
-    }
+    console.log('\nDebug Information:')
+    console.log('Scanned Files:')
+    this.scannedFiles.forEach((file) => console.log(`  - ${file}`))
+
+    console.log('\nFeature References Found:')
+    this.featureRefs.forEach((ref) => console.log(`  - ${ref.path} in ${ref.file}`))
   }
 }
 

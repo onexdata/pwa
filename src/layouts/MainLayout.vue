@@ -14,7 +14,9 @@
 
         <q-toolbar-title v-if="ui.toolbar.showTitle"> {{ $t('app.name') }} </q-toolbar-title>
 
-        <div v-if="isFeatureEnabled('ui.layout.quickMenu')">Quickmenu is enabled!</div>
+        <div v-if="isFeatureEnabled('ui.layout.quickMenu')">
+          <b>here goes nothing... ola la</b>Quickmenu is enabled!
+        </div>
         <div>Quasar v{{ $q.version }}</div>
       </q-toolbar>
     </q-header>
