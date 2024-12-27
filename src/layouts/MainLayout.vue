@@ -1,6 +1,6 @@
 <template>
   <q-layout :view="ui.layout.view">
-    <q-header :elevated="ui.header.elevated" v-if="ui.header.show">
+    <q-header :class="ui.header.class" :elevated="ui.header.elevated" v-if="ui.header.show">
       <q-toolbar :dense="ui.toolbar.dense" :flat="ui.toolbar.flat" :glossy="ui.toolbar.glossy">
         <q-btn
           v-if="ui.toolbar.showNavButton"
@@ -15,7 +15,6 @@
         <q-toolbar-title v-if="ui.toolbar.showTitle"> {{ $t('app.name') }} </q-toolbar-title>
 
         <QuickMenu v-if="isFeatureEnabled('ui.layout.quickMenu')" />
-        <div>Quasar v{{ $q.version }}</div>
       </q-toolbar>
     </q-header>
 

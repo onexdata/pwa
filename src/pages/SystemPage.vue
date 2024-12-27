@@ -127,7 +127,7 @@
             <q-card>
               <q-card-section>
                 <div class="text-h6">i18n Messages</div>
-                <pre class="debug-pre">{{ $i18n.messages[$i18n.locale] }}</pre>
+                <pre class="debug-pre">{{ $i18n.messages }}</pre>
               </q-card-section>
             </q-card>
           </div>

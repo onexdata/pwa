@@ -49,7 +49,7 @@
     "layout": {
       "quickMenu": {
         "enabled": true,
-        "description": "A quick menu (implemented however the layout likes) that provides the menu.quick items",
+        "description": "A quick menu (implemented however the layout likes) that provides the menu.quick items, intended for one-click usage, like in a toolbar.",
         "required": true,
         "expectedCoverage": 95
       },
